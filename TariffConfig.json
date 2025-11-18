@@ -1,0 +1,18 @@
+{
+	"defaultTariffCents": 56.98,
+	"discountedWIndows": [
+		{
+			"from": "00:00",
+			"to": "06:00",
+			"tariffCents": 30.8
+		},
+		{
+			"from": "10:00",
+			"to": "16:00",
+			"tariffCents": 18.0378
+		}
+	],
+	"discountPercentage": 7,
+	"feedInTariff": 4.5321637,
+	"5MinutesSupplyChargeCents": 0.0036
+}
