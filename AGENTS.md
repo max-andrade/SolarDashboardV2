@@ -1,13 +1,13 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Source logic: `DataImport.js` (n8n Function/Code node script).
+- Source logic: `Workflows/JS/DataImport.js` (n8n Function/Code node script).
 - Sample inputs: `SampleData/FroniusSampleData.json` (raw API), `SampleData/SampleData.json` (formatted example).
 - Tariffs/config: `TariffConfig.json` (consumption, feed-in, supply charge, windows).
 - Docs: `readme.md` (workflow background, API example, dashboard notes).
 - Dashboard app: `dashboard/` (Next.js App Router, TypeScript, Tailwind, MUI, Recharts, IndexedDB cache).
 
-Expected usage: `DataImport.js` runs inside n8n, consuming the first input item (`$input.first().json.data`) and a config item from a node named `Transform Config`.
+Expected usage: `Workflows/JS/DataImport.js` runs inside n8n, consuming the first input item (`$input.first().json.data`) and a config item from a node named `Transform Config`.
 
 Recent dashboard changes:
 - Added settings drawer with theme toggle and cache reset controls (data-only vs full).
@@ -50,4 +50,3 @@ Recent dashboard changes:
 ## Dashboard TODOs
 - Add runtime response validation (e.g., Zod) plus structured error logging.
 - Introduce ErrorBoundary for the app and unit tests for `aggregateRecords`, `getDataBetween`, and cache helpers.
-- Clarify/document final timezone bucketing strategy (UI local labels vs UTC API).

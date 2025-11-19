@@ -51,5 +51,4 @@ npm run dev   # open http://localhost:3000
 ## TODOs (dashboard)
 - Add runtime response validation (e.g., Zod) and structured error logging for API fetches.
 - Introduce ErrorBoundary for the app and unit tests for `aggregateRecords`, `getDataBetween`, and cache helpers.
-- Document/decide final timezone bucketing strategy (currently UI local for inputs/labels, UTC for API).
 
