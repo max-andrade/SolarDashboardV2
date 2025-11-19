@@ -10,6 +10,11 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import { useState } from "react";
 import { FiltersState } from "../lib/types";
@@ -34,6 +39,7 @@ export function SettingsDrawer({
   defaultApiBase,
 }: Props) {
   const [pending, setPending] = useState<null | "data" | "all">(null);
+  const [confirm, setConfirm] = useState<null | "data" | "all">(null);
 
   const handleThemeChange = (_: unknown, value: FiltersState["theme"] | null) => {
     if (!value) return;
@@ -119,7 +125,7 @@ export function SettingsDrawer({
             <Button
               variant="contained"
               color="warning"
-              onClick={handleResetData}
+              onClick={() => setConfirm("data")}
               disabled={pending !== null}
             >
               Reset data cache (keep preferences)
@@ -127,7 +133,7 @@ export function SettingsDrawer({
             <Button
               variant="contained"
               color="error"
-              onClick={handleResetAll}
+              onClick={() => setConfirm("all")}
               disabled={pending !== null}
             >
               Reset all local cached data
@@ -135,6 +141,30 @@ export function SettingsDrawer({
           </Stack>
         </Stack>
       </Box>
+      <Dialog open={!!confirm} onClose={() => setConfirm(null)}>
+        <DialogTitle>Confirm reset</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {confirm === "all"
+              ? "This will clear all locally cached data and preferences. Continue?"
+              : "This will clear cached data but keep your preferences. Continue?"}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirm(null)}>Cancel</Button>
+          <Button
+            color="error"
+            onClick={() => {
+              const action = confirm === "all" ? handleResetAll : handleResetData;
+              setConfirm(null);
+              void action();
+            }}
+            autoFocus
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Drawer>
   );
 }

@@ -20,9 +20,9 @@ function buildUrl(apiBase: string | undefined, from: Date, to: Date) {
   return `${base}${separator}from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`;
 }
 
-async function fetchRange(from: Date, to: Date, apiBase?: string) {
+async function fetchRange(from: Date, to: Date, apiBase?: string, signal?: AbortSignal) {
   const url = buildUrl(apiBase, from, to);
-  const resp = await fetch(url);
+  const resp = await fetch(url, { signal });
   if (!resp.ok) {
     throw new Error(`Failed to fetch data: ${resp.status}`);
   }
@@ -40,9 +40,26 @@ export async function getDataBetween(
   options?: {
     onChunk?: (dayKey: string, state: "cached" | "fetched") => void;
     apiBase?: string;
+    signal?: AbortSignal;
   }
 ): Promise<EnergyRecord[]> {
-  const manifest = new Set(await getCachedDayKeys());
+  if (!(from instanceof Date) || Number.isNaN(from.getTime())) {
+    throw new Error("Invalid from date");
+  }
+  if (!(to instanceof Date) || Number.isNaN(to.getTime())) {
+    throw new Error("Invalid to date");
+  }
+  if (from > to) {
+    throw new Error("From date must be before To date");
+  }
+
+  let manifest: Set<string>;
+  try {
+    manifest = new Set(await getCachedDayKeys());
+  } catch {
+    // If cache is unavailable, continue without it.
+    manifest = new Set();
+  }
   const dayStart = startOfDay(from);
   const dayEnd = startOfDay(to);
 
@@ -75,17 +92,21 @@ export async function getDataBetween(
   const results: EnergyRecord[] = [];
 
   for (const dayKey of cachedDays) {
-    const cached = await getDayFromCache(dayKey);
-    if (cached && cached.length) {
-      options?.onChunk?.(dayKey, "cached");
-      results.push(...cached);
+    try {
+      const cached = await getDayFromCache(dayKey);
+      if (cached && cached.length) {
+        options?.onChunk?.(dayKey, "cached");
+        results.push(...cached);
+      }
+    } catch {
+      // Ignore cache read failures and continue to fetch missing ranges.
     }
   }
 
   for (const range of missingRanges) {
     const fromRange = range.start;
     const toRange = range.end instanceof Date ? range.end : addDays(range.end, 1);
-    const fetched = await fetchRange(fromRange, toRange, options?.apiBase);
+    const fetched = await fetchRange(fromRange, toRange, options?.apiBase, options?.signal);
     options?.onChunk?.(isoDateOnly(fromRange), "fetched");
 
     // Split fetched data by day and cache per-day to keep manifest granularity
@@ -96,8 +117,12 @@ export async function getDataBetween(
       perDay[key].push(rec);
     }
     for (const [key, records] of Object.entries(perDay)) {
-      await setDayInCache(key, records);
-      await updateManifest(key);
+      try {
+        await setDayInCache(key, records);
+        await updateManifest(key);
+      } catch {
+        // Cache write failures should not block data availability.
+      }
       results.push(...records);
     }
   }

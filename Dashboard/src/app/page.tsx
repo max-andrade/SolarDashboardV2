@@ -40,6 +40,7 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const fetchIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
   const themeChoice = (() => {
     const themeSetting = filters?.theme ?? "system";
@@ -59,14 +60,32 @@ export default function Page() {
   const fetchData = useCallback(
     async (activeFilters: FiltersState) => {
       const requestId = ++fetchIdRef.current;
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortRef.current = controller;
       setLoading(true);
       const from = new Date(activeFilters.from);
       const to = new Date(activeFilters.to);
       try {
-        const records = await getDataBetween(from, to, { apiBase: activeFilters.apiBase });
+        if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+          throw new Error("Invalid date range");
+        }
+        if (from > to) {
+          throw new Error("From date must be before To date");
+        }
+        const records = await getDataBetween(from, to, {
+          apiBase: activeFilters.apiBase,
+          signal: controller.signal,
+        });
         const aggregated = aggregateRecords(records, activeFilters.aggregation);
+        const limited =
+          activeFilters.aggregation === "raw" && aggregated.length > 500
+            ? aggregated.slice(-500)
+            : aggregated;
         if (fetchIdRef.current === requestId) {
-          setPoints(aggregated);
+          setPoints(limited);
         }
       } catch (err) {
         if (fetchIdRef.current === requestId) {
