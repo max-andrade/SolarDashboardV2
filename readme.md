@@ -1,6 +1,6 @@
 ## Repository overview
 
-This repo demonstrates an end‑to‑end energy data pipeline using n8n workflows, a Fronius inverter/datamanager, and a Next.js dashboard. It includes containerization assets for Azure Container Instances, automation workflows, a web UI, and sample data/fixtures.
+This repo demonstrates an end-to-end energy data pipeline using n8n workflows, a Fronius inverter/datamanager, and a Next.js dashboard. It includes containerization assets for Azure Container Instances, automation workflows, a web UI, and sample data/fixtures.
 
 ### Folder map
 - `Containers/`: Docker setup used to run the n8n workflow stack in Azure Container Instances.
@@ -25,7 +25,7 @@ A new dashboard lives in `/dashboard` (Next.js app router, TypeScript, MUI, Tail
 ## Features
 - Filters with persisted state (date range, aggregation; defaults to last 30 days, daily).
 - Stacked bar chart: grid import, grid export, PV used on-site; toggle to cost view. Tooltips include cost and units (kWh when daily/weekly/monthly, Wh otherwise).
-- Summary cards (“period in a nutshell”) using kWh for daily or coarser aggregations.
+- Summary cards ("period in a nutshell") using kWh for daily or coarser aggregations.
 - Local cache for filter preferences and per-day API responses in IndexedDB; a simple loading bar shows when cache/network is being queried.
 - CSV export of the aggregated view.
 - Theming with system/light/dark and preference persistence.
@@ -51,3 +51,4 @@ npm run dev   # open http://localhost:3000
 - Add runtime response validation (e.g., Zod) and structured error logging for API fetches.
 - Introduce ErrorBoundary for the app and unit tests for `aggregateRecords`, `getDataBetween`, and cache helpers.
 - Document/decide final timezone bucketing strategy (currently UI local for inputs/labels, UTC for API).
+
