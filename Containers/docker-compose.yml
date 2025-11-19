@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./certs:/etc/nginx/certs:ro
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+    networks:
+      - proxy-tier
+
+  nginx-proxy-acme:
+    image: nginxproxy/acme-companion
+    container_name: nginx-proxy-acme
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - acme:/etc/acme.sh
+    environment:
+      - DEFAULT_EMAIL=max.andrade@gmail.com
+      - NGINX_PROXY_CONTAINER=nginx-proxy
+    depends_on:
+      - nginx-proxy
+    networks:
+      - proxy-tier
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=Str0ngpassword!!
+      - POSTGRES_DB=n8n
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - proxy-tier
+
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n
+    restart: always
+    environment:
+      - DB_TYPE=postgres
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=Str0ngpassword!!
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+      - VIRTUAL_HOST=n8n.20.248.127.1.nip.io
+      - LETSENCRYPT_HOST=n8n.20.248.127.1.nip.io
+      - LETSENCRYPT_EMAIL=max.andrade@gmail.com
+      - N8N_HOST=n8n.20.248.127.1.nip.io
+      - WEBHOOK_URL=https://n8n.20.248.127.1.nip.io/
+      - N8N_WEBHOOK_TUNNEL_URL=https://n8n.20.248.127.1.nip.io/
+    depends_on:
+      - postgres
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - proxy-tier
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: openwebui
+    restart: always
+    environment:
+      - VIRTUAL_HOST=openwebui.20.248.127.1.nip.io
+      - LETSENCRYPT_HOST=openwebui.20.248.127.1.nip.io
+      - LETSENCRYPT_EMAIL=max.andrade@gmail.com
+    volumes:
+      - ./openwebui_data:/app/backend/data
+    networks:
+      - proxy-tier
+
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    volumes:
+      - ./homeassistant_config:/config
+    environment:
+      - VIRTUAL_HOST=homeassistant.20.248.127.1.nip.io
+      - LETSENCRYPT_HOST=homeassistant.20.248.127.1.nip.io
+      - LETSENCRYPT_EMAIL=max.andrade@gmail.com
+    network_mode: host
+
+volumes:
+  certs:
+  vhost:
+  html:
+  postgres_data:
+  n8n_data:
+  acme:
+
+networks:
+  proxy-tier:
+    driver: bridge

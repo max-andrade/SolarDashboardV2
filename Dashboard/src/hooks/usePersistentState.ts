@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { readFilters, writeFilters } from "../lib/cache";
 import { FiltersState } from "../lib/types";
-import { DEFAULT_API_BASE } from "../lib/config";
 
 const DEFAULT_AGGREGATION: FiltersState["aggregation"] = "day";
 
@@ -26,7 +25,6 @@ const buildDefaultFilters = (): FiltersState => {
     to,
     aggregation: DEFAULT_AGGREGATION,
     theme: "system",
-    apiBase: DEFAULT_API_BASE,
   };
 };
 
@@ -41,7 +39,6 @@ export function usePersistentFilters() {
           ...buildDefaultFilters(),
           ...stored,
           theme: stored.theme ?? "system",
-          apiBase: stored.apiBase ?? DEFAULT_API_BASE,
         });
       } else {
         setFilters(buildDefaultFilters());

@@ -18,6 +18,7 @@ import {
   Skeleton,
 } from "@mui/material";
 import { AggregatedPoint, Aggregation } from "../lib/types";
+import { useMemo } from "react";
 
 type Props = {
   points: AggregatedPoint[];
@@ -80,19 +81,22 @@ function EnergyTooltip({
 
 export function EnergyChart({ points, mode, onModeChange, aggregation, loading = false }: Props) {
   const kwh = useKWh(aggregation);
-  const data =
-    mode === "energy"
-      ? points.map((p) => ({
-          label: p.label,
-          gridImport: kwh ? p.gridImport / 1000 : p.gridImport,
-          gridExport: kwh ? p.gridExport / 1000 : p.gridExport,
-          pvUsed: kwh ? p.pvUsed / 1000 : p.pvUsed,
-          cost: p.cost,
-        }))
-      : points.map((p) => ({
-          label: p.label,
-          cost: p.cost / 100, // convert cents to dollars for display
-        }));
+  const data = useMemo(
+    () =>
+      mode === "energy"
+        ? points.map((p) => ({
+            label: p.label,
+            gridImport: kwh ? p.gridImport / 1000 : p.gridImport,
+            gridExport: kwh ? p.gridExport / 1000 : p.gridExport,
+            pvUsed: kwh ? p.pvUsed / 1000 : p.pvUsed,
+            cost: p.cost,
+          }))
+        : points.map((p) => ({
+            label: p.label,
+            cost: p.cost / 100, // convert cents to dollars for display
+          })),
+    [mode, points, kwh]
+  );
 
   const unitLabel = kwh ? "kWh" : "Wh";
 

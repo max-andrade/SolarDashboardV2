@@ -18,7 +18,6 @@ export type FiltersState = {
   to: string; // ISO string
   aggregation: Aggregation;
   theme: "light" | "dark" | "system";
-  apiBase?: string;
 };
 
 export type AggregatedPoint = {

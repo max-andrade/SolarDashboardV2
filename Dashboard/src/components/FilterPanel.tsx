@@ -96,6 +96,7 @@ export function FilterPanel({ filters, onChange, disabled }: Props) {
             onChange={(e) => handleInput("from", e.target.value)}
             InputLabelProps={{ shrink: true }}
             disabled={disabled}
+            inputProps={{ "aria-label": "From date time" }}
             sx={{
               "& input[type='datetime-local']::-webkit-calendar-picker-indicator": {
                 filter: (theme) =>
@@ -111,6 +112,7 @@ export function FilterPanel({ filters, onChange, disabled }: Props) {
             onChange={(e) => handleInput("to", e.target.value)}
             InputLabelProps={{ shrink: true }}
             disabled={disabled}
+            inputProps={{ "aria-label": "To date time" }}
             sx={{
               "& input[type='datetime-local']::-webkit-calendar-picker-indicator": {
                 filter: (theme) =>
