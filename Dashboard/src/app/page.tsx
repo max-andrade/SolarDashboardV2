@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CssBaseline,
   Container,
@@ -15,7 +15,10 @@ import {
   createTheme,
   ThemeProvider,
   useMediaQuery,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
+import SettingsIcon from "@mui/icons-material/Settings";
 import { FilterPanel } from "../components/FilterPanel";
 import { SummaryCards } from "../components/SummaryCards";
 import { EnergyChart } from "../components/EnergyChart";
@@ -24,18 +27,24 @@ import { usePersistentFilters } from "../hooks/usePersistentState";
 import { aggregateRecords } from "../lib/aggregation";
 import { getDataBetween } from "../lib/api";
 import { AggregatedPoint, FiltersState } from "../lib/types";
-import { ThemeToggle } from "../components/ThemeToggle";
+import { clearAllCache, clearDataCache } from "../lib/cache";
+import { SettingsDrawer } from "../components/SettingsDrawer";
+import { DEFAULT_API_BASE } from "../lib/config";
 
 export default function Page() {
   const prefersDark = useMediaQuery("(prefers-color-scheme: dark)");
-  const { filters, updateFilters } = usePersistentFilters();
+  const { filters, updateFilters, resetFilters } = usePersistentFilters();
   const [mode, setMode] = useState<"energy" | "cost">("energy");
   const [loading, setLoading] = useState(false);
   const [points, setPoints] = useState<AggregatedPoint[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const fetchIdRef = useRef(0);
 
-  const themeChoice =
-    filters?.theme === "system" ? (prefersDark ? "dark" : "light") : filters?.theme ?? "light";
+  const themeChoice = (() => {
+    const themeSetting = filters?.theme ?? "system";
+    return themeSetting === "system" ? (prefersDark ? "dark" : "light") : themeSetting;
+  })();
   const theme = useMemo(
     () =>
       createTheme({
@@ -47,29 +56,55 @@ export default function Page() {
     [themeChoice]
   );
 
-  const handleThemeChange = (themeValue: FiltersState["theme"]) => {
-    if (!filters) return;
-    updateFilters({ ...filters, theme: themeValue });
-  };
+  const fetchData = useCallback(
+    async (activeFilters: FiltersState) => {
+      const requestId = ++fetchIdRef.current;
+      setLoading(true);
+      const from = new Date(activeFilters.from);
+      const to = new Date(activeFilters.to);
+      try {
+        const records = await getDataBetween(from, to, { apiBase: activeFilters.apiBase });
+        const aggregated = aggregateRecords(records, activeFilters.aggregation);
+        if (fetchIdRef.current === requestId) {
+          setPoints(aggregated);
+        }
+      } catch (err) {
+        if (fetchIdRef.current === requestId) {
+          setError(err instanceof Error ? err.message : "Unknown error");
+        }
+      } finally {
+        if (fetchIdRef.current === requestId) {
+          setLoading(false);
+        }
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     if (!filters) return;
-    const run = async () => {
-      setLoading(true);
-      const from = new Date(filters.from);
-      const to = new Date(filters.to);
-      try {
-        const records = await getDataBetween(from, to);
-        const aggregated = aggregateRecords(records, filters.aggregation);
-        setPoints(aggregated);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        setLoading(false);
-      }
-    };
-    void run();
-  }, [filters]);
+    void fetchData(filters);
+  }, [filters, fetchData]);
+
+  const handleResetDataCache = async () => {
+    if (!filters) return;
+    try {
+      await clearDataCache();
+      await fetchData(filters);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reset data cache");
+    }
+  };
+
+  const handleResetAllCache = async () => {
+    try {
+      await clearAllCache();
+      setPoints([]);
+      resetFilters();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reset cache");
+    }
+  };
 
   return (
     <ThemeProvider theme={theme}>
@@ -77,20 +112,20 @@ export default function Page() {
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Fronius Energy Dashboard
+            Solar/Energy Dashboard
           </Typography>
-          {filters && <ThemeToggle value={filters.theme} onChange={handleThemeChange} />}
+          <Tooltip title="Settings">
+            <IconButton color="inherit" onClick={() => setSettingsOpen(true)}>
+              <SettingsIcon />
+            </IconButton>
+          </Tooltip>
         </Toolbar>
       </AppBar>
       <Container maxWidth="lg" sx={{ py: 3 }}>
         {filters ? (
           <>
             {loading && <LinearProgress sx={{ mb: 2 }} />}
-            <FilterPanel
-              filters={filters}
-              onChange={updateFilters}
-              disabled={loading}
-            />
+            <FilterPanel filters={filters} onChange={updateFilters} disabled={loading} />
             <Stack
               direction={{ xs: "column", sm: "row" }}
               spacing={2}
@@ -105,21 +140,14 @@ export default function Page() {
                 <ExportButton points={points} />
               </Stack>
             </Stack>
-            {loading ? (
-              <Stack alignItems="center" sx={{ mt: 4 }}>
-                <CircularProgress />
-              </Stack>
-            ) : (
-              <>
-                <SummaryCards points={points} aggregation={filters.aggregation} />
-                <EnergyChart
-                  points={points}
-                  mode={mode}
-                  onModeChange={setMode}
-                  aggregation={filters.aggregation}
-                />
-              </>
-            )}
+            <SummaryCards points={points} aggregation={filters.aggregation} />
+            <EnergyChart
+              points={points}
+              mode={mode}
+              onModeChange={setMode}
+              aggregation={filters.aggregation}
+              loading={loading}
+            />
           </>
         ) : (
           <Stack alignItems="center" sx={{ mt: 4 }}>
@@ -127,6 +155,17 @@ export default function Page() {
           </Stack>
         )}
       </Container>
+      {filters && (
+        <SettingsDrawer
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          filters={filters}
+          onUpdateFilters={updateFilters}
+          onResetDataCache={handleResetDataCache}
+          onResetAllCache={handleResetAllCache}
+          defaultApiBase={DEFAULT_API_BASE}
+        />
+      )}
       <Snackbar
         open={!!error}
         autoHideDuration={6000}

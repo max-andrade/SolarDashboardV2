@@ -15,6 +15,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  Skeleton,
 } from "@mui/material";
 import { AggregatedPoint, Aggregation } from "../lib/types";
 
@@ -23,6 +24,7 @@ type Props = {
   mode: "energy" | "cost";
   onModeChange: (mode: "energy" | "cost") => void;
   aggregation: Aggregation;
+  loading?: boolean;
 };
 
 const useKWh = (aggregation: Aggregation) =>
@@ -76,7 +78,7 @@ function EnergyTooltip({
   );
 }
 
-export function EnergyChart({ points, mode, onModeChange, aggregation }: Props) {
+export function EnergyChart({ points, mode, onModeChange, aggregation, loading = false }: Props) {
   const kwh = useKWh(aggregation);
   const data =
     mode === "energy"
@@ -116,47 +118,56 @@ export function EnergyChart({ points, mode, onModeChange, aggregation }: Props) 
         </ToggleButtonGroup>
       </Box>
 
-      <ResponsiveContainer width="100%" height={420}>
-        {mode === "energy" ? (
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="label" interval="preserveStartEnd" />
-            <YAxis />
-            <Tooltip content={<EnergyTooltip unitLabel={unitLabel} />} />
-            <Legend />
-            <Bar
-              dataKey="gridImport"
-              name={`Grid Import (${unitLabel})`}
-              stackId="energy"
-              fill="#1976d2"
-            />
-            <Bar
-              dataKey="gridExport"
-              name={`Grid Export (${unitLabel})`}
-              stackId="energy"
-              fill="#ef6c00"
-            />
-            <Bar
-              dataKey="pvUsed"
-              name={`PV Used (${unitLabel})`}
-              stackId="energy"
-              fill="#2e7d32"
-            />
-            <Bar dataKey="Cost (AUD $)" hide />
-          </BarChart>
-        ) : (
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="label" interval="preserveStartEnd" />
-            <YAxis />
-            <Tooltip
-              formatter={(value: number) => [`$${value.toFixed(2)}`, "Cost"]}
-            />
-            <Legend />
-            <Bar dataKey="cost" fill="#9c27b0" name="Cost (AUD $)" />
-          </BarChart>
-        )}
-      </ResponsiveContainer>
+      {loading ? (
+        <Skeleton
+          variant="rectangular"
+          height={420}
+          animation="wave"
+          sx={{ borderRadius: 1 }}
+        />
+      ) : (
+        <ResponsiveContainer width="100%" height={420}>
+          {mode === "energy" ? (
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" interval="preserveStartEnd" />
+              <YAxis />
+              <Tooltip content={<EnergyTooltip unitLabel={unitLabel} />} />
+              <Legend />
+              <Bar
+                dataKey="gridImport"
+                name={`Grid Import (${unitLabel})`}
+                stackId="energy"
+                fill="#1976d2"
+              />
+              <Bar
+                dataKey="gridExport"
+                name={`Grid Export (${unitLabel})`}
+                stackId="energy"
+                fill="#ef6c00"
+              />
+              <Bar
+                dataKey="pvUsed"
+                name={`PV Used (${unitLabel})`}
+                stackId="energy"
+                fill="#2e7d32"
+              />
+              <Bar dataKey="Cost (AUD $)" hide />
+            </BarChart>
+          ) : (
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" interval="preserveStartEnd" />
+              <YAxis />
+              <Tooltip
+                formatter={(value: number) => [`$${value.toFixed(2)}`, "Cost"]}
+              />
+              <Legend />
+              <Bar dataKey="cost" fill="#9c27b0" name="Cost (AUD $)" />
+            </BarChart>
+          )}
+        </ResponsiveContainer>
+      )}
     </Box>
   );
 }

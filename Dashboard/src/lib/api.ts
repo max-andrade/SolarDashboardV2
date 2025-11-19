@@ -1,14 +1,27 @@
 import { addDays, startOfDay } from "date-fns";
 import { EnergyRecord } from "./types";
 import { getCachedDayKeys, getDayFromCache, setDayInCache, updateManifest } from "./cache";
-
-const API_URL =
-  "https://n8n.20.248.127.1.nip.io/webhook/FroniusData?from={FROM}&to={TO}";
+import { DEFAULT_API_BASE } from "./config";
 
 const isoDateOnly = (date: Date) => date.toISOString().slice(0, 10);
 
-async function fetchRange(from: Date, to: Date) {
-  const url = API_URL.replace("{FROM}", from.toISOString()).replace("{TO}", to.toISOString());
+function buildUrl(apiBase: string | undefined, from: Date, to: Date) {
+  const base = (apiBase && apiBase.trim()) || DEFAULT_API_BASE;
+  const fromIso = from.toISOString();
+  const toIso = to.toISOString();
+
+  if (base.includes("{FROM}") || base.includes("{TO}")) {
+    return base
+      .replace("{FROM}", encodeURIComponent(fromIso))
+      .replace("{TO}", encodeURIComponent(toIso));
+  }
+
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`;
+}
+
+async function fetchRange(from: Date, to: Date, apiBase?: string) {
+  const url = buildUrl(apiBase, from, to);
   const resp = await fetch(url);
   if (!resp.ok) {
     throw new Error(`Failed to fetch data: ${resp.status}`);
@@ -24,7 +37,10 @@ async function fetchRange(from: Date, to: Date) {
 export async function getDataBetween(
   from: Date,
   to: Date,
-  onChunk?: (dayKey: string, state: "cached" | "fetched") => void
+  options?: {
+    onChunk?: (dayKey: string, state: "cached" | "fetched") => void;
+    apiBase?: string;
+  }
 ): Promise<EnergyRecord[]> {
   const manifest = new Set(await getCachedDayKeys());
   const dayStart = startOfDay(from);
@@ -61,7 +77,7 @@ export async function getDataBetween(
   for (const dayKey of cachedDays) {
     const cached = await getDayFromCache(dayKey);
     if (cached && cached.length) {
-      onChunk?.(dayKey, "cached");
+      options?.onChunk?.(dayKey, "cached");
       results.push(...cached);
     }
   }
@@ -69,8 +85,8 @@ export async function getDataBetween(
   for (const range of missingRanges) {
     const fromRange = range.start;
     const toRange = range.end instanceof Date ? range.end : addDays(range.end, 1);
-    const fetched = await fetchRange(fromRange, toRange);
-    onChunk?.(isoDateOnly(fromRange), "fetched");
+    const fetched = await fetchRange(fromRange, toRange, options?.apiBase);
+    options?.onChunk?.(isoDateOnly(fromRange), "fetched");
 
     // Split fetched data by day and cache per-day to keep manifest granularity
     const perDay: Record<string, EnergyRecord[]> = {};

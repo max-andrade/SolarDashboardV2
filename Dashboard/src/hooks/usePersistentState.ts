@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { readFilters, writeFilters } from "../lib/cache";
 import { FiltersState } from "../lib/types";
+import { DEFAULT_API_BASE } from "../lib/config";
 
 const DEFAULT_AGGREGATION: FiltersState["aggregation"] = "day";
 
@@ -18,6 +19,17 @@ const defaultDateRange = (): { from: string; to: string } => {
   return { from: isoLocal(from), to: isoLocal(now) };
 };
 
+const buildDefaultFilters = (): FiltersState => {
+  const { from, to } = defaultDateRange();
+  return {
+    from,
+    to,
+    aggregation: DEFAULT_AGGREGATION,
+    theme: "system",
+    apiBase: DEFAULT_API_BASE,
+  };
+};
+
 export function usePersistentFilters() {
   const [filters, setFilters] = useState<FiltersState | null>(null);
 
@@ -25,15 +37,14 @@ export function usePersistentFilters() {
     async function load() {
       const stored = await readFilters();
       if (stored) {
-        setFilters(stored);
-      } else {
-        const { from, to } = defaultDateRange();
         setFilters({
-          from,
-          to,
-          aggregation: DEFAULT_AGGREGATION,
-          theme: "system",
+          ...buildDefaultFilters(),
+          ...stored,
+          theme: stored.theme ?? "system",
+          apiBase: stored.apiBase ?? DEFAULT_API_BASE,
         });
+      } else {
+        setFilters(buildDefaultFilters());
       }
     }
     load();
@@ -46,5 +57,13 @@ export function usePersistentFilters() {
     });
   };
 
-  return { filters, updateFilters };
+  const resetFilters = () => {
+    const defaults = buildDefaultFilters();
+    setFilters(defaults);
+    writeFilters(defaults).catch(() => {
+      /* ignore cache write errors */
+    });
+  };
+
+  return { filters, updateFilters, resetFilters };
 }

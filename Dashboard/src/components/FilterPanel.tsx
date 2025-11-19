@@ -11,6 +11,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { differenceInHours } from "date-fns";
 import { Aggregation, FiltersState } from "../lib/types";
 
 type Props = {
@@ -28,8 +29,27 @@ const aggregationOptions: { value: Aggregation; label: string }[] = [
 ];
 
 export function FilterPanel({ filters, onChange, disabled }: Props) {
+  const suggestAggregation = (fromValue: string, toValue: string): Aggregation | null => {
+    const fromDate = new Date(fromValue);
+    const toDate = new Date(toValue);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) return null;
+    const hours = Math.abs(differenceInHours(toDate, fromDate));
+    if (hours <= 24) return "raw";
+    if (hours <= 72) return "hour";
+    return "day";
+  };
+
+  const applyAggregationRule = (next: FiltersState, changedKey: keyof FiltersState | "range") => {
+    if (changedKey === "aggregation") return next;
+    const suggested = suggestAggregation(next.from, next.to);
+    if (suggested && suggested !== next.aggregation) {
+      return { ...next, aggregation: suggested };
+    }
+    return next;
+  };
+
   const handleInput = (key: keyof FiltersState, value: string) => {
-    onChange({ ...filters, [key]: value });
+    onChange(applyAggregationRule({ ...filters, [key]: value }, key));
   };
 
   const handlePreset = (days: number) => {
@@ -40,11 +60,15 @@ export function FilterPanel({ filters, onChange, disabled }: Props) {
       new Date(d.getTime() - d.getTimezoneOffset() * 60000)
         .toISOString()
         .slice(0, 16);
-    onChange({
-      ...filters,
-      from: isoLocal(from),
-      to: isoLocal(to),
-    });
+    const next = applyAggregationRule(
+      {
+        ...filters,
+        from: isoLocal(from),
+        to: isoLocal(to),
+      },
+      "range"
+    );
+    onChange(next);
   };
 
   return (
@@ -72,6 +96,12 @@ export function FilterPanel({ filters, onChange, disabled }: Props) {
             onChange={(e) => handleInput("from", e.target.value)}
             InputLabelProps={{ shrink: true }}
             disabled={disabled}
+            sx={{
+              "& input[type='datetime-local']::-webkit-calendar-picker-indicator": {
+                filter: (theme) =>
+                  theme.palette.mode === "dark" ? "invert(1)" : "none",
+              },
+            }}
           />
           <TextField
             label="To"
@@ -81,6 +111,12 @@ export function FilterPanel({ filters, onChange, disabled }: Props) {
             onChange={(e) => handleInput("to", e.target.value)}
             InputLabelProps={{ shrink: true }}
             disabled={disabled}
+            sx={{
+              "& input[type='datetime-local']::-webkit-calendar-picker-indicator": {
+                filter: (theme) =>
+                  theme.palette.mode === "dark" ? "invert(1)" : "none",
+              },
+            }}
           />
           <FormControl size="small">
             <InputLabel id="agg-label">Aggregation</InputLabel>
