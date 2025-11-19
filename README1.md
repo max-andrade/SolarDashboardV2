@@ -3,12 +3,12 @@
 This repo demonstrates an end-to-end energy data pipeline using n8n workflows, a Fronius inverter/datamanager, and a Next.js dashboard. It includes containerization assets for Azure Container Instances, automation workflows, a web UI, and sample data/fixtures.
 
 ### Folder map
-- `Containers/`: Docker setup used to run the n8n workflow stack in Azure Container Instances.
-- `Workflows/`: Two n8n workflows for Fronius integration.
+- `/Containers`: Docker setup used to run the n8n workflow stack in Azure Container Instances.
+- `/Workflows`: Two n8n workflows for Fronius integration.
   - `FroniusDataIngestion.json`: Daily import and pre-processing of PV/meter data, including interval aggregation and tariff-based cost calculations (peak/off-peak/shoulder, discounts, export rate).
   - `FroniusDataAPI.json`: HTTP API that serves the pre-processed data to the dashboard.
-- `Dashboard/`: Next.js (App Router) UI for querying and visualizing inverter/datamanager data via the API.
-- `SampleData/`: Example datasets used for development and testing.
+- `/Dashboard`: Next.js (App Router) UI for querying and visualizing inverter/datamanager data via the API.
+- `/SampleData`: Example datasets used for development and testing.
 
 **Data API:** `https://n8n.20.248.127.1.nip.io/webhook/FroniusData?from=2025-11-17T22:40:00Z&to=2025-11-18T22:40:00Z` (use ISO/UTC for `from`/`to`).
 
@@ -17,7 +17,7 @@ This repo demonstrates an end-to-end energy data pipeline using n8n workflows, a
 - `SampleData/FroniusSampleData.json`: Raw source data from Fronius.
 - `SampleData/PowerConsumptionTableSampleData.json`: Historical table snapshot.
 - `Workflows/Config/TariffConfig.json`: Tariff configuration for ingestion.
-- `DataImport.js`: Transformation logic used by the ingestion workflow.
+- `Workflows/JS/DataImport.js`: Transformation logic used by the ingestion workflow.
 
 # Dashboard (Next.js + MUI + Tailwind)
 A new dashboard lives in `/dashboard` (Next.js app router, TypeScript, MUI, Tailwind, Recharts, IndexedDB caching).
