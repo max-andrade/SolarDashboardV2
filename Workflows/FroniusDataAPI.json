@@ -85,6 +85,57 @@
       ],
       "id": "85888a07-2b57-42db-8def-3d1f7ef32b38",
       "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "db48ab33-3e3a-49f3-9f0b-c54ca2bebf58",
+              "leftValue": "={{ $json.headers['x-api-key'] }}",
+              "rightValue": "this-is-the-api-key",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ea410faf-1973-4191-b1c5-850cb9ff5ce0",
+      "name": "If API Key is valid"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Invalid API Key",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        464,
+        144
+      ],
+      "id": "72668609-1dcd-484e-b4ab-a72868aca696",
+      "name": "Respond to Webhook"
     }
   ],
   "connections": {
@@ -92,7 +143,7 @@
       "main": [
         [
           {
-            "node": "Get row(s)",
+            "node": "If API Key is valid",
             "type": "main",
             "index": 0
           }
@@ -115,6 +166,24 @@
         [
           {
             "node": "Return Dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If API Key is valid": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
