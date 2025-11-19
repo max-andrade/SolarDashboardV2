@@ -1,10 +1,11 @@
 "use client";
 
 import { Card, CardContent, Grid, Typography } from "@mui/material";
-import { AggregatedPoint } from "../lib/types";
+import { AggregatedPoint, Aggregation } from "../lib/types";
 
 type Props = {
   points: AggregatedPoint[];
+  aggregation: Aggregation;
 };
 
 const formatter = new Intl.NumberFormat(undefined, {
@@ -15,7 +16,12 @@ const costFormatter = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
 });
 
-export function SummaryCards({ points }: Props) {
+const useKWh = (aggregation: Aggregation) =>
+  aggregation === "day" || aggregation === "week" || aggregation === "month";
+
+export function SummaryCards({ points, aggregation }: Props) {
+  const kwh = useKWh(aggregation);
+  const energyUnit = kwh ? "kWh" : "Wh";
   const totals = points.reduce(
     (acc, p) => {
       acc.gridImport += p.gridImport;
@@ -27,10 +33,15 @@ export function SummaryCards({ points }: Props) {
     { gridImport: 0, gridExport: 0, pvUsed: 0, cost: 0 }
   );
 
+  const toDisplay = (val: number) => (kwh ? val / 1000 : val);
+
   const cards = [
-    { label: "Grid Import (Wh)", value: formatter.format(totals.gridImport) },
-    { label: "Grid Export (Wh)", value: formatter.format(totals.gridExport) },
-    { label: "PV Used On-site (Wh)", value: formatter.format(totals.pvUsed) },
+    { label: `Grid Import (${energyUnit})`, value: formatter.format(toDisplay(totals.gridImport)) },
+    { label: `Grid Export (${energyUnit})`, value: formatter.format(toDisplay(totals.gridExport)) },
+    {
+      label: `PV Used On-site (${energyUnit})`,
+      value: formatter.format(toDisplay(totals.pvUsed)),
+    },
     {
       label: "Net Cost (AUD $)",
       value: `$${costFormatter.format(totals.cost / 100)}`,

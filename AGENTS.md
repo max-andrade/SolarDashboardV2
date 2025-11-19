@@ -36,4 +36,4 @@ Expected usage: `DataImport.js` runs inside n8n, consuming the first input item 
 - Validate tariff fields; default missing numeric fields to 0.
 - Time handling: `StartDate` carries timezone; output uses UTC ISO. UI uses local display; API queries stay UTC.
 - n8n node names are significant (e.g., `Transform Config`); keep them consistent or adjust lookups.
-- Dashboard data expectations: API returns `{ ts, import, export, pv, cost }` (Wh/cents). Aggregations sum values; PV used is `max(pv - export, 0)`. IndexedDB caches per-day fetches with a manifest key.
+- Dashboard data expectations: API returns `{ ts, import, export, pv, cost }` (Wh/cents). Aggregations sum values; PV used is `max(pv - export, 0)`. IndexedDB caches per-day slices; fetcher issues contiguous range requests in UTC (`Z`) to fill gaps.

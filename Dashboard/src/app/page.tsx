@@ -7,6 +7,7 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  LinearProgress,
   AppBar,
   Toolbar,
   Typography,
@@ -18,7 +19,6 @@ import {
 import { FilterPanel } from "../components/FilterPanel";
 import { SummaryCards } from "../components/SummaryCards";
 import { EnergyChart } from "../components/EnergyChart";
-import { DataGapIndicator } from "../components/DataGapIndicator";
 import { ExportButton } from "../components/ExportButton";
 import { usePersistentFilters } from "../hooks/usePersistentState";
 import { aggregateRecords } from "../lib/aggregation";
@@ -32,10 +32,6 @@ export default function Page() {
   const [mode, setMode] = useState<"energy" | "cost">("energy");
   const [loading, setLoading] = useState(false);
   const [points, setPoints] = useState<AggregatedPoint[]>([]);
-  const [gapState, setGapState] = useState<{ loading: string[]; cached: string[] }>({
-    loading: [],
-    cached: [],
-  });
   const [error, setError] = useState<string | null>(null);
 
   const themeChoice =
@@ -60,19 +56,10 @@ export default function Page() {
     if (!filters) return;
     const run = async () => {
       setLoading(true);
-      setGapState({ loading: [], cached: [] });
       const from = new Date(filters.from);
       const to = new Date(filters.to);
       try {
-        const records = await getDataBetween(from, to, (dayKey, state) => {
-          setGapState((prev) => {
-            const loading =
-              state === "fetched" ? Array.from(new Set([...prev.loading, dayKey])) : prev.loading;
-            const cached =
-              state === "cached" ? Array.from(new Set([...prev.cached, dayKey])) : prev.cached;
-            return { loading, cached };
-          });
-        });
+        const records = await getDataBetween(from, to);
         const aggregated = aggregateRecords(records, filters.aggregation);
         setPoints(aggregated);
       } catch (err) {
@@ -98,6 +85,7 @@ export default function Page() {
       <Container maxWidth="lg" sx={{ py: 3 }}>
         {filters ? (
           <>
+            {loading && <LinearProgress sx={{ mb: 2 }} />}
             <FilterPanel
               filters={filters}
               onChange={updateFilters}
@@ -117,18 +105,19 @@ export default function Page() {
                 <ExportButton points={points} />
               </Stack>
             </Stack>
-            <DataGapIndicator
-              loadingDays={gapState.loading}
-              cachedDays={gapState.cached}
-            />
             {loading ? (
               <Stack alignItems="center" sx={{ mt: 4 }}>
                 <CircularProgress />
               </Stack>
             ) : (
               <>
-                <SummaryCards points={points} />
-                <EnergyChart points={points} mode={mode} onModeChange={setMode} />
+                <SummaryCards points={points} aggregation={filters.aggregation} />
+                <EnergyChart
+                  points={points}
+                  mode={mode}
+                  onModeChange={setMode}
+                  aggregation={filters.aggregation}
+                />
               </>
             )}
           </>

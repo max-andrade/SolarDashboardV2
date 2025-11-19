@@ -105,22 +105,24 @@ export function FilterPanel({ filters, onChange, disabled }: Props) {
           <Typography variant="body2" sx={{ alignSelf: "center" }}>
             Quick ranges:
           </Typography>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => handlePreset(7)}
-            disabled={disabled}
-          >
-            7d
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => handlePreset(30)}
-            disabled={disabled}
-          >
-            30d
-          </Button>
+          {[
+            { label: "24h", days: 1 },
+            { label: "48h", days: 2 },
+            { label: "72h", days: 3 },
+            { label: "7d", days: 7 },
+            { label: "30d", days: 30 },
+            { label: "90d", days: 90 },
+          ].map((opt) => (
+            <Button
+              key={opt.label}
+              variant="outlined"
+              size="small"
+              onClick={() => handlePreset(opt.days)}
+              disabled={disabled}
+            >
+              {opt.label}
+            </Button>
+          ))}
         </Stack>
       </Stack>
     </Box>

@@ -16,9 +16,9 @@ A new dashboard lives in `/dashboard` (Next.js app router, TypeScript, MUI, Tail
 
 ## Features
 - Filters with persisted state (date range, aggregation; defaults to last 30 days, daily).
-- Stacked bar chart: grid import, grid export, PV used on-site; toggle to cost view.
-- Summary cards (“period in a nutshell”).
-- Local cache for filter preferences and per-day API responses in IndexedDB; shows cached vs fetching day chips.
+- Stacked bar chart: grid import, grid export, PV used on-site; toggle to cost view. Tooltips include cost and units (kWh when daily/weekly/monthly, Wh otherwise).
+- Summary cards (“period in a nutshell”) using kWh for daily or coarser aggregations.
+- Local cache for filter preferences and per-day API responses in IndexedDB; a simple loading bar shows when cache/network is being queried.
 - CSV export of the aggregated view.
 - Theming with system/light/dark and preference persistence.
 
@@ -32,5 +32,5 @@ npm run dev   # open http://localhost:3000
 ## Notes on data
 - API responses are assumed to match `SampleData/SampleData.json` shape:
   - `ts` (ISO), `import` (Wh), `export` (Wh), `pv` (Wh), `cost` (cents; can be negative).
-- Aggregations sum energy and cost; PV used is `max(pv - export, 0)` per bucket.
-- Date inputs/visuals use local time; API stays UTC in query params.
+- Aggregations sum energy and cost; PV used is `max(pv - export, 0)` per bucket. When aggregation is daily or coarser, energy displays in kWh; otherwise Wh.
+- Date inputs/visuals use local time; API stays UTC (`Z` timestamps) in query params. Fetching batches contiguous missing ranges and caches per-day slices for reuse.
