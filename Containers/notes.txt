@@ -1,0 +1,41 @@
+Router!
+
+ssh max@20.248.127.1
+sudo -i
+cd docker-setup
+
+rm docker-compose.yml
+nano docker-compose.yml
+nano homeassistant_config/configuration.yaml
+
+docker-compose down
+docker-compose up -d
+
+docker-compose restart openwebui
+docker-compose restart n8n
+docker-compose restart nginx-proxy
+
+docker logs nginx-proxy
+docker logs nginx-proxy-acme
+
+docker exec -it n8n sh
+
+// fix issue with Let's Encrypt registration
+docker exec -it nginx-proxy bash
+mkdir -p /usr/share/nginx/html/.well-known/acme-challenge
+echo "test" > /usr/share/nginx/html/.well-known/acme-challenge/test
+exit
+
+
+
+// VPN Config
+See Deco VPN Setup.docx
+
+homeassistant:
+  external_url: "https://homeassistant.20.248.127.1.nip.io"
+
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 172.18.0.0/16   # Docker network range
+    - 165.225.226.120
