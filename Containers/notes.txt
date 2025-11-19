@@ -29,7 +29,8 @@ exit
 
 
 // VPN Config
-See Deco VPN Setup.docx
+See Deco VPN Setup.docx / https://mamediashare.blob.core.windows.net/public/Deco-VPN-Setup.docx 
+SSH via VPN IP, for example ssh max@10.8.0.2
 
 homeassistant:
   external_url: "https://homeassistant.20.248.127.1.nip.io"
