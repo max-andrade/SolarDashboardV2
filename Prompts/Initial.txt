@@ -1,0 +1,13 @@
+create a reactjs/nextjs application under the dashboard folder. This application will provide a dashboard to visualise Energy Consumption vs PV generation based on the data from the API https://n8n.20.248.127.1.nip.io/webhook/FroniusData?from=2025-11-17T22:40:00Z&to=2025-11-18T22:40:00Z. A sample file can be found under @SampleData/SampleData.json .
+
+The dashboard should include:
+
+a filter section to allow selecting a data range for visualisation, the aggregation interval, which could be raw, hour, daily, weekly or monthly. By default, the last 30 days, on a daily aggregation
+a bar style chart containing the aggregated visualisation for the selected period. Each bar should be split into 3 colour coded sections: consumed from the grid, exported to the grid consumed from PV. on hover, a hover tooltip should provide detailed values for each of those dimentions, and the total cost, where negative numbers could be present when exporting to the grid is more than importing.
+on top of the chart, also display a summary for the whole period in a friendly, meaninful and visual card format (something like period in a nutshell).
+any changes to filters made by the user should be stored in local cache to be remembered next time the user visits the page.
+any data retrieved from the API should be persisted in local cache to minimise future calls to the API when the data is already available locally. The application should be able to figure out missing gaps any only query for missing data. If appropriate, make sure to introduce a good local cache/storage framework rather than using browser sotrage features directly
+make sure to componentize the implementation in smaller components rather than producing few large files with logic/UI.
+make sure to update the reademe.md and agents.md with latest changes.
+before proceeding with the implementation, review requirements, ask for clarifications, if needed, and provide improvement suggestions.
+use UI compoments from a well regarded library like MUI or CHADCN, and also tailwind CSS for styling. Make sure to implement themeing, including support for automatically identifying the current OS/browser as light or dark as a default (but persist preference if changed for future sessions).

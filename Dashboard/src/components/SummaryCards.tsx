@@ -1,0 +1,56 @@
+"use client";
+
+import { Card, CardContent, Grid, Typography } from "@mui/material";
+import { AggregatedPoint } from "../lib/types";
+
+type Props = {
+  points: AggregatedPoint[];
+};
+
+const formatter = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 0,
+});
+
+const costFormatter = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 2,
+});
+
+export function SummaryCards({ points }: Props) {
+  const totals = points.reduce(
+    (acc, p) => {
+      acc.gridImport += p.gridImport;
+      acc.gridExport += p.gridExport;
+      acc.pvUsed += p.pvUsed;
+      acc.cost += p.cost;
+      return acc;
+    },
+    { gridImport: 0, gridExport: 0, pvUsed: 0, cost: 0 }
+  );
+
+  const cards = [
+    { label: "Grid Import (Wh)", value: formatter.format(totals.gridImport) },
+    { label: "Grid Export (Wh)", value: formatter.format(totals.gridExport) },
+    { label: "PV Used On-site (Wh)", value: formatter.format(totals.pvUsed) },
+    {
+      label: "Net Cost (AUD $)",
+      value: `$${costFormatter.format(totals.cost / 100)}`,
+    },
+  ];
+
+  return (
+    <Grid container spacing={2} sx={{ mb: 2 }}>
+      {cards.map((card) => (
+        <Grid item xs={12} sm={6} md={3} key={card.label}>
+          <Card variant="outlined" sx={{ height: "100%" }}>
+            <CardContent>
+              <Typography variant="subtitle2" color="text.secondary">
+                {card.label}
+              </Typography>
+              <Typography variant="h5">{card.value}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+  );
+}

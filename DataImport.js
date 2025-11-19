@@ -26,18 +26,6 @@ function calculateEnergyDeltas(rawJsonPayload, tariffs) {
 
     // --- TARIFF HELPER FUNCTIONS ---
     
-    // Determine whether the inverter energy values are cumulative or per-interval.
-    const isNonDecreasing = (values) => {
-        if (!values) return false;
-        const offsets = Object.keys(values).map(Number).sort((a, b) => a - b);
-        for (let i = 1; i < offsets.length; i++) {
-            const prev = +values[offsets[i - 1]] || 0;
-            const curr = +values[offsets[i]] || 0;
-            if (curr < prev) return false;
-        }
-        return true;
-    };
-
     /**
      * Determines the consumption rate (in Cents/Wh) for a given timestamp.
      * @param {Date} timestamp The date/time of the interval end.
@@ -81,7 +69,6 @@ function calculateEnergyDeltas(rawJsonPayload, tariffs) {
     const pvValues = data[inverterKey]?.Data?.EnergyReal_WAC_Sum_Produced?.Values;
     const exportValues = data[meterKey]?.Data?.EnergyReal_WAC_Minus_Absolute?.Values;
     const importValues = data[meterKey]?.Data?.EnergyReal_WAC_Plus_Absolute?.Values;
-    const pvIsCumulative = isNonDecreasing(pvValues);
     
     // Determine the starting timestamp
     const startTimeISO = rawJsonPayload.Head.RequestArguments.StartDate;
@@ -108,7 +95,6 @@ function calculateEnergyDeltas(rawJsonPayload, tariffs) {
     };
 
     let prevValues = {
-        pv: 0,
         export: 0,
         import: 0
     };
@@ -118,7 +104,6 @@ function calculateEnergyDeltas(rawJsonPayload, tariffs) {
         const currentOffset = sortedOffsets[i];
         
         if (previousOffset === 0) {
-            prevValues.pv = getEnergy(pvValues, currentOffset);
             prevValues.export = getEnergy(exportValues, currentOffset);
             prevValues.import = getEnergy(importValues, currentOffset);
             previousOffset = currentOffset;
@@ -130,20 +115,18 @@ function calculateEnergyDeltas(rawJsonPayload, tariffs) {
         const intervalEndDate = new Date(currentTimestampMs); 
         const currentTimestampISO = intervalEndDate.toISOString(); // UTC ISO for output field
 
-        // Get current cumulative values
+        // Get current values (PV is per-interval already)
         const currentPV = getEnergy(pvValues, currentOffset);
         const currentExport = getEnergy(exportValues, currentOffset);
         const currentImport = getEnergy(importValues, currentOffset);
 
-        // Calculate raw deltas
-        const rawDeltaPV = pvIsCumulative ? (currentPV - prevValues.pv) : currentPV;
+        // Calculate raw deltas (import/export are cumulative so diff them)
         const rawDeltaExport = currentExport - prevValues.export;
         const rawDeltaImport = currentImport - prevValues.import;
         
         const intervalSeconds = currentOffset - previousOffset;
 
         // --- ENFORCEMENT & FORMATTING (Integer Wh and Non-Negative) ---
-        const deltaPV = Math.round(Math.max(0, rawDeltaPV));
         const deltaExport = Math.round(Math.max(0, rawDeltaExport));
         const deltaImport = Math.round(Math.max(0, rawDeltaImport));
 
@@ -178,9 +161,7 @@ function calculateEnergyDeltas(rawJsonPayload, tariffs) {
             Timestamp_UTC_ISO: currentTimestampISO, 
             Interval_Seconds: intervalSeconds,
             
-            PV_Production_Wh_Previous: prevValues.pv,
-            PV_Production_Wh_Current: currentPV,
-            PV_Production_Wh: deltaPV,
+            PV_Production_Wh: currentPV,
             
             Grid_Export_Wh_Previous: prevValues.export,
             Grid_Export_Wh_Current: currentExport,
@@ -195,7 +176,6 @@ function calculateEnergyDeltas(rawJsonPayload, tariffs) {
         });
 
         // Update previous values for the next iteration 
-        prevValues.pv = currentPV;
         prevValues.export = currentExport;
         prevValues.import = currentImport;
         previousOffset = currentOffset;
