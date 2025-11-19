@@ -3,18 +3,25 @@
     {
       "parameters": {
         "path": "FroniusData",
+        "authentication": "headerAuth",
         "responseMode": "responseNode",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        0,
+        176,
         0
       ],
       "id": "b974aa54-1c74-4084-9c07-752a2a4640d3",
       "name": "Webhook",
-      "webhookId": "ff204d20-a3af-42e6-baf7-a574ae5e1d37"
+      "webhookId": "ff204d20-a3af-42e6-baf7-a574ae5e1d37",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "33cAXlACEReku1D7",
+          "name": "Header Auth account"
+        }
+      }
     },
     {
       "parameters": {
@@ -78,57 +85,6 @@
       ],
       "id": "85888a07-2b57-42db-8def-3d1f7ef32b38",
       "name": "Code in JavaScript"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "db48ab33-3e3a-49f3-9f0b-c54ca2bebf58",
-              "leftValue": "={{ $json.headers['x-api-key'] }}",
-              "rightValue": "this-is-the-api-key",
-              "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        208,
-        0
-      ],
-      "id": "ea410faf-1973-4191-b1c5-850cb9ff5ce0",
-      "name": "If API Key is valid"
-    },
-    {
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "Invalid API Key",
-        "options": {
-          "responseCode": 401
-        }
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.4,
-      "position": [
-        464,
-        144
-      ],
-      "id": "72668609-1dcd-484e-b4ab-a72868aca696",
-      "name": "Respond to Webhook"
     }
   ],
   "connections": {
@@ -136,7 +92,7 @@
       "main": [
         [
           {
-            "node": "If API Key is valid",
+            "node": "Get row(s)",
             "type": "main",
             "index": 0
           }
@@ -164,64 +120,9 @@
           }
         ]
       ]
-    },
-    "If API Key is valid": {
-      "main": [
-        [
-          {
-            "node": "Get row(s)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
-  "pinData": {
-    "Webhook": [
-      {
-        "headers": {
-          "host": "n8n.20.248.127.1.nip.io",
-          "x-real-ip": "165.225.226.120",
-          "x-forwarded-for": "165.225.226.120",
-          "x-forwarded-host": "n8n.20.248.127.1.nip.io",
-          "x-forwarded-proto": "https",
-          "x-forwarded-ssl": "on",
-          "x-forwarded-port": "443",
-          "x-original-uri": "/webhook-test/FroniusData?from=2025-10-13T00:00:00Z&to=2025-12-31T00:00:00Z",
-          "sec-ch-ua": "\"Google Chrome\";v=\"141\", \"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"141\"",
-          "sec-ch-ua-mobile": "?0",
-          "sec-ch-ua-platform": "\"Windows\"",
-          "upgrade-insecure-requests": "1",
-          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-          "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-          "sec-fetch-site": "none",
-          "sec-fetch-mode": "navigate",
-          "sec-fetch-user": "?1",
-          "sec-fetch-dest": "document",
-          "accept-encoding": "gzip, deflate, br, zstd",
-          "accept-language": "en-US,en;q=0.9",
-          "priority": "u=0, i",
-          "cookie": "rl_page_init_referrer=RudderEncrypt%3AU2FsdGVkX1%2B0dBBFykpp0Y90J1pJ9CmrJPqIArGTrQA%3D; rl_page_init_referring_domain=RudderEncrypt%3AU2FsdGVkX19lmACBWcdEHVrw3HSmVt1fmbS9qPQ92E0%3D; rl_anonymous_id=RudderEncrypt%3AU2FsdGVkX18%2Bnj%2BsLfQ%2BUvqsIdNKhYefgSEhBbSpTCS5zw4QbD1IcyVe0Rn7KG6JJv1M0cwUGpnELSpEcgrcIQ%3D%3D; rl_user_id=RudderEncrypt%3AU2FsdGVkX19SD6JKPeuKpiHAD3QcjMyhPulE1HN2FRARiHpsNLaJibJoB2wSuRMH2mjnOhueAPBWyxVCzQHtjZx5QWBKTtfS4w%2FwngPVzBQ95RDtUJQmrUBzD84D7IgHZTFksyePN6B7%2Fp%2FiuHeMb%2FmKRsik34W9N4%2FoRcWpAj0%3D; rl_trait=RudderEncrypt%3AU2FsdGVkX19pGEmDbf1KArMvbQep8Cq7Ai0AqgbH27Z%2BYZ6DtjX9gtxTSSWO%2FLobSkFJWGawVllgsqI%2FWY8fQEJbGJXAovumABdHmqFOOFk%2FPJI90yL3%2Fp80S1EyZKoC1Zz0BMZhh5wlbL05JVIwG5PFGb76wC%2By2Gqo1y1Sf3I%3D; ph_phc_4URIAm1uYfJO7j8kWSe0J8lc8IqnstRLS7Jx8NcakHo_posthog=%7B%22distinct_id%22%3A%224ab91bab864a2351731c3830cf1a228e471d4ffac4be0bbb71ef1fb9e253345f%235e2de998-0ff2-4152-9c9a-6c5f83038e7c%22%2C%22%24sesid%22%3A%5B1760334117306%2C%220199dc16-bc04-7106-959c-1f3ba67ef213%22%2C1760334101506%5D%2C%22%24epp%22%3Atrue%2C%22%24initial_person_info%22%3A%7B%22r%22%3A%22%24direct%22%2C%22u%22%3A%22https%3A%2F%2Fn8n.20.248.127.1.nip.io%2Fsignin%3Fredirect%3D%25252Fworkflow%22%7D%7D; rl_session=RudderEncrypt%3AU2FsdGVkX18xXDL1ZAxrf8qZJVcKr%2F3DNN5oalBL%2B9%2BFbvCqLMb4jmIm2umezpbMfr5xI6QBf09%2FnzY2AERxBRmM7r%2FPVHtLTbgENukKhxcD%2FO1YskN6OJS3UlC6aZspG5%2FvmnqCUu1A3%2Fh4vFvo9g%3D%3D"
-        },
-        "params": {},
-        "query": {
-          "from": "2025-10-13T00:00:00Z",
-          "to": "2025-12-31T00:00:00Z"
-        },
-        "body": {},
-        "webhookUrl": "https://n8n.20.248.127.1.nip.io/webhook-test/FroniusData",
-        "executionMode": "test"
-      }
-    ]
-  },
+  "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "4ab91bab864a2351731c3830cf1a228e471d4ffac4be0bbb71ef1fb9e253345f"
