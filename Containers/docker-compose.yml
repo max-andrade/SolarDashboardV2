@@ -39,7 +39,7 @@ services:
     restart: always
     environment:
       - POSTGRES_USER=n8n
-      - POSTGRES_PASSWORD=Str0ngpassword!!
+      - POSTGRES_PASSWORD=[UPDATE WITH ACTUAL PASSWORD BEFORE USE]
       - POSTGRES_DB=n8n
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -55,7 +55,7 @@ services:
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_DATABASE=n8n
       - DB_POSTGRESDB_USER=n8n
-      - DB_POSTGRESDB_PASSWORD=Str0ngpassword!!
+      - DB_POSTGRESDB_PASSWORD=[UPDATE WITH ACTUAL PASSWORD BEFORE USE]
       - NODE_TLS_REJECT_UNAUTHORIZED=0
       - VIRTUAL_HOST=n8n.20.248.127.1.nip.io
       - LETSENCRYPT_HOST=n8n.20.248.127.1.nip.io
