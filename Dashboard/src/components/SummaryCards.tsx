@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, Grid, Typography } from "@mui/material";
+import { Card, CardContent, Typography, Box } from "@mui/material";
 import { AggregatedPoint, Aggregation } from "../lib/types";
 
 type Props = {
@@ -49,19 +49,24 @@ export function SummaryCards({ points, aggregation }: Props) {
   ];
 
   return (
-    <Grid container spacing={2} sx={{ mb: 2 }}>
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
+        gap: 2,
+        mb: 2,
+      }}
+    >
       {cards.map((card) => (
-        <Grid item xs={12} sm={6} md={3} key={card.label}>
-          <Card variant="outlined" sx={{ height: "100%" }}>
-            <CardContent>
-              <Typography variant="subtitle2" color="text.secondary">
-                {card.label}
-              </Typography>
-              <Typography variant="h5">{card.value}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+        <Card key={card.label} variant="outlined" sx={{ height: "100%" }}>
+          <CardContent>
+            <Typography variant="subtitle2" color="text.secondary">
+              {card.label}
+            </Typography>
+            <Typography variant="h5">{card.value}</Typography>
+          </CardContent>
+        </Card>
       ))}
-    </Grid>
+    </Box>
   );
 }

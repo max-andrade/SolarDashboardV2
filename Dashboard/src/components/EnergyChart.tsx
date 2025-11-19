@@ -9,7 +9,6 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  TooltipProps,
 } from "recharts";
 import {
   Box,
@@ -29,19 +28,32 @@ type Props = {
 const useKWh = (aggregation: Aggregation) =>
   aggregation === "day" || aggregation === "week" || aggregation === "month";
 
-function EnergyTooltip({
-  active,
-  payload,
-  label,
-  unitLabel,
-}: TooltipProps<number, string> & { unitLabel: string }) {
-  if (!active || !payload || !payload.length) return null;
-  const base = payload[0]?.payload as {
+type EnergyTooltipProps = {
+  active?: boolean;
+  payload?: EnergyPayloadEntry[];
+  label?: string;
+  unitLabel: string;
+};
+
+type EnergyPayloadEntry = {
+  dataKey?: string | number;
+  value?: number | string;
+  payload?: {
     gridImport?: number;
     gridExport?: number;
     pvUsed?: number;
     cost?: number;
   };
+};
+
+function EnergyTooltip({
+  active,
+  payload,
+  label,
+  unitLabel,
+}: EnergyTooltipProps) {
+  if (!active || !payload || !payload.length) return null;
+  const base = (payload[0] as EnergyPayloadEntry)?.payload ?? {};
   const costDollars = ((base?.cost ?? 0) as number) / 100;
   return (
     <Box sx={{ p: 1, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
@@ -111,16 +123,25 @@ export function EnergyChart({ points, mode, onModeChange, aggregation }: Props) 
             <XAxis dataKey="label" interval="preserveStartEnd" />
             <YAxis />
             <Tooltip content={<EnergyTooltip unitLabel={unitLabel} />} />
-            <Legend
-              payload={[
-                { value: `Grid Import (${unitLabel})`, type: "square", color: "#1976d2" },
-                { value: `Grid Export (${unitLabel})`, type: "square", color: "#ef6c00" },
-                { value: `PV Used (${unitLabel})`, type: "square", color: "#2e7d32" },
-              ]}
+            <Legend />
+            <Bar
+              dataKey="gridImport"
+              name={`Grid Import (${unitLabel})`}
+              stackId="energy"
+              fill="#1976d2"
             />
-            <Bar dataKey="gridImport" stackId="energy" fill="#1976d2" />
-            <Bar dataKey="gridExport" stackId="energy" fill="#ef6c00" />
-            <Bar dataKey="pvUsed" stackId="energy" fill="#2e7d32" />
+            <Bar
+              dataKey="gridExport"
+              name={`Grid Export (${unitLabel})`}
+              stackId="energy"
+              fill="#ef6c00"
+            />
+            <Bar
+              dataKey="pvUsed"
+              name={`PV Used (${unitLabel})`}
+              stackId="energy"
+              fill="#2e7d32"
+            />
             <Bar dataKey="cost" hide />
           </BarChart>
         ) : (
