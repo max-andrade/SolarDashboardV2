@@ -103,11 +103,10 @@ export function FilterPanel({ filters, onChange, disabled }: Props) {
         </Stack>
         <Stack direction="row" spacing={1}>
           <Typography variant="body2" sx={{ alignSelf: "center" }}>
-            Quick ranges:
+            Quick Ranges:
           </Typography>
           {[
             { label: "24h", days: 1 },
-            { label: "48h", days: 2 },
             { label: "72h", days: 3 },
             { label: "7d", days: 7 },
             { label: "30d", days: 30 },

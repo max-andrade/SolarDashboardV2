@@ -142,7 +142,7 @@ export function EnergyChart({ points, mode, onModeChange, aggregation }: Props) 
               stackId="energy"
               fill="#2e7d32"
             />
-            <Bar dataKey="cost" hide />
+            <Bar dataKey="Cost (AUD $)" hide />
           </BarChart>
         ) : (
           <BarChart data={data}>
