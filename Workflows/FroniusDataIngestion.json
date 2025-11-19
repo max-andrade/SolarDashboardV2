@@ -1,0 +1,391 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        -32
+      ],
+      "id": "86516dbb-b531-4737-bab2-d01db8da3dd1",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "wAcWqmjYFadaxwpd",
+          "mode": "list",
+          "cachedResultName": "PropertyBag",
+          "cachedResultUrl": "/projects/gEHfzHPEj95WzjAJ/datatables/wAcWqmjYFadaxwpd"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "Name",
+              "keyValue": "FroniusLastImport"
+            },
+            {
+              "keyName": "Name",
+              "keyValue": "Tariff"
+            },
+            {
+              "keyName": "Name",
+              "keyValue": "FroniusApiBaseUrl"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        -32
+      ],
+      "id": "9464cae4-59a4-461a-a77c-5940933ecbe6",
+      "name": "Load Config"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Maximum query is 16 days\nlet startDate = new Date(new Date().setHours(-24 * 15)).toISOString();\nlet endDate = new Date().toISOString();\nlet tariff = null;\nlet baseUrl = null;\n\nfor (const item of $input.all()) {\n  if ((item.json.Name === 'FroniusLastImport') && (startDate < item.json.Value)) {\n    startDate = item.json.Value;\n  } else if (item.json.Name === 'Tariff') {\n    tariff = JSON.parse(item.json.Value);\n  } else if (item.json.Name === 'FroniusApiBaseUrl') {\n    baseUrl = item.json.Value;\n  }\n}\n\nreturn {\n  startDate,\n  endDate,\n  tariff,\n  url: `${baseUrl}/GetArchiveData.cgi?Scope=System&StartDate=${startDate}&EndDate=${endDate}&Channel=EnergyReal_WAC_Sum_Produced&Channel=EnergyReal_WAC_Plus_Absolute&Channel=EnergyReal_WAC_Minus_Absolute`,\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -32
+      ],
+      "id": "f3d08a01-7f24-4310-8bbc-49e4a7e7965e",
+      "name": "Transform Config"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        128,
+        -32
+      ],
+      "id": "69b2b337-6357-49db-82a9-22169b768bda",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawData = JSON.parse($input.first().json.data);\nconst tariff = $('Transform Config').first().json.tariff;\nconst data = calculateEnergyDeltas(rawData, tariff);\nreturn data.sort((a, b) => {\n    return new Date(a.Timestamp_UTC_ISO) - new Date(b.Timestamp_UTC_ISO);\n});\n\n/*\ntotal = 0;\nmonth.forEach(d => total += d.TotalCost_Cents);\nconsole.log(total / 100);\n*/\n\n\n/**\n * Processes the cumulative energy data from the Fronius GetArchiveData.cgi API \n * response to calculate energy deltas (production, import, export) for each \n * 5-minute interval and calculate the total cost based on provided tariffs.\n *\n * @param {object} rawJsonPayload The JSON response object from the Fronius API.\n * @param {object} tariffs The tariff structure including rates, discount, and supply charge.\n * @returns {Array<object>} An array of objects containing chronological interval data and total cost.\n */\nfunction calculateEnergyDeltas(rawJsonPayload, tariffs) {\n    const outputData = [];\n\n    // --- TARIFF HELPER FUNCTIONS ---\n    \n    /**\n     * Determines the consumption rate (in Cents/Wh) for a given timestamp.\n     * @param {Date} timestamp The date/time of the interval end.\n     * @returns {number} The consumption tariff rate in Cents/Wh.\n     */\n    const getConsumptionRate = (timestamp) => {\n        // Use toTimeString() to get the time in the Date object's local timezone (derived from StartDate offset)\n        const timeStr = timestamp.toTimeString().substring(0, 5); // e.g., \"05:30\"\n        \n        // Find if the timestamp falls within any discounted window\n        const window = tariffs.discountedWIndows.find(w => {\n            return timeStr >= w.from && timeStr < w.to;\n        });\n\n        // Convert Cents/kWh to Cents/Wh\n        const ratePerKWh = window ? window.tariffCents : tariffs.defaultTariffCents;\n        return ratePerKWh / 1000;\n    };\n    \n    // Convert supply charge to per-Wh unit (assuming tariffs.5MinutesSupplyChargeCents is Cents for 5 minutes)\n    const fiveMinSupplyCharge = tariffs['5MinutesSupplyChargeCents'] || 0;\n    \n    // Convert Feed-in Tariff from Cents/kWh to Cents/Wh\n    const feedInRatePerWh = (tariffs.feedInTariff || 0) / 1000;\n\n    // --- 1. Locate Data Paths (Safely) ---\n    const data = rawJsonPayload?.Body?.Data;\n    if (!data) {\n        console.error(\"Error: Missing 'Body.Data' in the payload.\");\n        return outputData;\n    }\n\n    const inverterKey = Object.keys(data).find(key => key.startsWith('inverter/'));\n    const meterKey = Object.keys(data).find(key => key.startsWith('meter:'));\n\n    if (!inverterKey || !meterKey) {\n        console.error(\"Error: Could not find inverter or meter data paths.\");\n        return outputData;\n    }\n\n    const pvValues = data[inverterKey]?.Data?.EnergyReal_WAC_Sum_Produced?.Values;\n    const exportValues = data[meterKey]?.Data?.EnergyReal_WAC_Minus_Absolute?.Values;\n    const importValues = data[meterKey]?.Data?.EnergyReal_WAC_Plus_Absolute?.Values;\n    \n    // Determine the starting timestamp\n    const startTimeISO = rawJsonPayload.Head.RequestArguments.StartDate;\n    if (!startTimeISO) {\n        console.error(\"Error: Missing StartDate in RequestArguments.\");\n        return outputData;\n    }\n    // The Date object created here maintains the local time zone offset specified in startTimeISO\n    const startTimeMs = new Date(startTimeISO).getTime();\n\n    // --- 2. Normalize and Sort Time Offsets ---\n    const allOffsets = new Set([\n        ...Object.keys(pvValues).map(Number),\n        ...Object.keys(exportValues).map(Number),\n        ...Object.keys(importValues).map(Number)\n    ]);\n    \n    const sortedOffsets = Array.from(allOffsets).sort((a, b) => a - b);\n\n    // --- 3. Process Data and Calculate Deltas ---\n    \n    const getEnergy = (values, offset) => {\n        return +values[offset] || 0; \n    };\n\n    let prevValues = {\n        export: 0,\n        import: 0\n    };\n    let previousOffset = 0;\n\n    for (let i = 0; i < sortedOffsets.length; i++) {\n        const currentOffset = sortedOffsets[i];\n        \n        if (previousOffset === 0) {\n            prevValues.export = getEnergy(exportValues, currentOffset);\n            prevValues.import = getEnergy(importValues, currentOffset);\n            previousOffset = currentOffset;\n            continue;\n        }\n\n        const currentTimestampMs = startTimeMs + (currentOffset * 1000);\n        // intervalEndDate retains the offset and represents the time in the local timezone\n        const intervalEndDate = new Date(currentTimestampMs); \n        const currentTimestampISO = intervalEndDate.toISOString(); // UTC ISO for output field\n\n        // Get current values (PV is per-interval already)\n        const currentPV = getEnergy(pvValues, currentOffset);\n        const currentExport = getEnergy(exportValues, currentOffset);\n        const currentImport = getEnergy(importValues, currentOffset);\n\n        // Calculate raw deltas (import/export are cumulative so diff them)\n        const rawDeltaExport = currentExport - prevValues.export;\n        const rawDeltaImport = currentImport - prevValues.import;\n        \n        const intervalSeconds = currentOffset - previousOffset;\n\n        // --- ENFORCEMENT & FORMATTING (Integer Wh and Non-Negative) ---\n        const deltaExport = Math.round(Math.max(0, rawDeltaExport));\n        const deltaImport = Math.round(Math.max(0, rawDeltaImport));\n\n        // --- COST CALCULATION ---\n\n        // 1. Calculate Grid Import Cost (Positive cost)\n        const importRatePerWh = getConsumptionRate(intervalEndDate);\n        const importCostCents = deltaImport * importRatePerWh;\n        \n        // 2. Calculate Grid Export Credit (Negative cost/credit)\n        const exportCreditCents = deltaExport * feedInRatePerWh * -1;\n        \n        // 3. Calculate Supply Charge (Positive cost)\n        // Scale the supply charge if the interval isn't exactly 5 minutes.\n        const supplyChargeCents = fiveMinSupplyCharge * (intervalSeconds / 300);\n\n        // 4. Apply Discount (Excludes supply charge)\n        const totalEnergyCostBeforeDiscount = importCostCents;\n        const discountFactor = (100 - (tariffs.discountPercentage || 0)) / 100;\n        const discountedEnergyCost = totalEnergyCostBeforeDiscount * discountFactor;\n        \n        // Calculate the actual discount applied\n        // This is necessary because the feed-in credit might make the net energy cost negative.\n        const actualDiscountApplied = totalEnergyCostBeforeDiscount - discountedEnergyCost;\n\n        // Calculate total cost (Import Cost + Export Credit + Supply Charge)\n        const totalEnergyAndExport = importCostCents + exportCreditCents;\n        const totalCostBeforeSupplyCharge = totalEnergyAndExport - actualDiscountApplied;\n        const totalCostCents = totalCostBeforeSupplyCharge + supplyChargeCents;\n\n        outputData.push({\n            Timestamp_UTC_ISO: currentTimestampISO, \n            Interval_Seconds: intervalSeconds,\n            \n            PV_Production_Wh: currentPV,\n            \n            Grid_Export_Wh_Previous: prevValues.export,\n            Grid_Export_Wh_Current: currentExport,\n            Grid_Export_Wh: deltaExport,\n            \n            Grid_Import_Wh_Previous: prevValues.import,\n            Grid_Import_Wh_Current: currentImport,\n            Grid_Import_Wh: deltaImport,\n            \n            // New field for total cost (positive if owed, negative if credit)\n            TotalCost_Cents: totalCostCents\n        });\n\n        // Update previous values for the next iteration \n        prevValues.export = currentExport;\n        prevValues.import = currentImport;\n        previousOffset = currentOffset;\n    }\n\n    return outputData;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        -32
+      ],
+      "id": "bf5310e9-92db-4097-988d-3173c34b8c4f",
+      "name": "Transform Data"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "HzIp4xt6yxrMtKpt",
+          "mode": "list",
+          "cachedResultName": "PowerConsumption",
+          "cachedResultUrl": "/projects/gEHfzHPEj95WzjAJ/datatables/HzIp4xt6yxrMtKpt"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "Grid_Export_Wh": "={{ $json.Grid_Export_Wh }}",
+            "Grid_Export_Wh_Current": "={{ $json.Grid_Export_Wh_Current }}",
+            "Grid_Export_Wh_Previous": "={{ $json.Grid_Export_Wh_Previous }}",
+            "Grid_Import_Wh": "={{ $json.Grid_Import_Wh }}",
+            "Grid_Import_Wh_Current": "={{ $json.Grid_Import_Wh_Current }}",
+            "Grid_Import_Wh_Previous": "={{ $json.Grid_Import_Wh_Previous }}",
+            "Interval_Seconds": "={{ $json.Interval_Seconds }}",
+            "PV_Production_Wh": "={{ $json.PV_Production_Wh }}",
+            "PV_Production_Wh_Current": "={{ $json.PV_Production_Wh_Current }}",
+            "PV_Production_Wh_Previous": "={{ $json.PV_Production_Wh_Previous }}",
+            "TotalCost_Cents": "={{ $json.TotalCost_Cents }}",
+            "Timestamp_UTC_ISO": "={{ $json.Timestamp_UTC_ISO }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Grid_Export_Wh",
+              "displayName": "Grid_Export_Wh",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Grid_Export_Wh_Current",
+              "displayName": "Grid_Export_Wh_Current",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Grid_Export_Wh_Previous",
+              "displayName": "Grid_Export_Wh_Previous",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Grid_Import_Wh",
+              "displayName": "Grid_Import_Wh",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Grid_Import_Wh_Current",
+              "displayName": "Grid_Import_Wh_Current",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Grid_Import_Wh_Previous",
+              "displayName": "Grid_Import_Wh_Previous",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Interval_Seconds",
+              "displayName": "Interval_Seconds",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PV_Production_Wh",
+              "displayName": "PV_Production_Wh",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PV_Production_Wh_Current",
+              "displayName": "PV_Production_Wh_Current",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PV_Production_Wh_Previous",
+              "displayName": "PV_Production_Wh_Previous",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Timestamp_UTC_ISO",
+              "displayName": "Timestamp_UTC_ISO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "TotalCost_Cents",
+              "displayName": "TotalCost_Cents",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        544,
+        -32
+      ],
+      "id": "5a2f7819-5cf6-4f57-a769-69494b5d851c",
+      "name": "Insert Data"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "wAcWqmjYFadaxwpd",
+          "mode": "list",
+          "cachedResultName": "PropertyBag",
+          "cachedResultUrl": "/projects/gEHfzHPEj95WzjAJ/datatables/wAcWqmjYFadaxwpd"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "Name",
+              "keyValue": "FroniusLastImport"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Value": "={{ $('Transform Config').item.json.endDate }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Value",
+              "displayName": "Value",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -32
+      ],
+      "id": "0cf54351-4935-4282-98f8-6312b2d4ff86",
+      "name": "Upsert row(s)",
+      "executeOnce": true
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Load Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Config": {
+      "main": [
+        [
+          {
+            "node": "Transform Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Config": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Transform Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Data": {
+      "main": [
+        [
+          {
+            "node": "Insert Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Data": {
+      "main": [
+        [
+          {
+            "node": "Upsert row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "4ab91bab864a2351731c3830cf1a228e471d4ffac4be0bbb71ef1fb9e253345f"
+  }
+}
