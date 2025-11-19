@@ -29,7 +29,7 @@ A new dashboard lives in `/dashboard` (Next.js app router, TypeScript, MUI, Tail
 - Local cache for filter preferences and per-day API responses in IndexedDB; a simple loading bar shows when cache/network is being queried.
 - CSV export of the aggregated view.
 - Theming with system/light/dark and preference persistence.
-- Settings drawer with theme selection, API base override (defaults to `NEXT_PUBLIC_API_URL` or the nip.io URL), and cache resets (data-only or full).
+- Settings drawer with theme selection and cache resets (data-only or full).
 - Auto-adjust aggregation based on range (<=24h raw, <=72h hourly, otherwise daily); raw view limits render to the latest 500 points.
 - Abortable fetches with basic date validation; chart shows a shimmer skeleton while loading.
 
@@ -46,6 +46,7 @@ npm run dev   # open http://localhost:3000
 - Aggregations sum energy and cost; PV used is `max(pv - export, 0)` per bucket. When aggregation is daily or coarser, energy displays in kWh; otherwise Wh.
 - Date inputs/visuals use local time; API stays UTC (`Z` timestamps) in query params. Fetching batches contiguous missing ranges and caches per-day slices for reuse.
 - IndexedDB errors are tolerated during fetch; fallback continues without cache.
+- Client traffic now calls the local Next.js proxy at `/api/data`; upstream n8n URL and API key are provided via server env vars `POWER_DATA_API_URL` and `POWER_DATA_API_KEY` (not exposed client-side).
 
 ## TODOs (dashboard)
 - Add runtime response validation (e.g., Zod) and structured error logging for API fetches.

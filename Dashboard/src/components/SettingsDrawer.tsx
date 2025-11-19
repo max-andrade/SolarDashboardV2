@@ -6,7 +6,6 @@ import {
   Divider,
   Drawer,
   Stack,
-  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -26,7 +25,6 @@ type Props = {
   onUpdateFilters: (next: FiltersState) => void;
   onResetDataCache: () => Promise<void> | void;
   onResetAllCache: () => Promise<void> | void;
-  defaultApiBase: string;
 };
 
 export function SettingsDrawer({
@@ -36,7 +34,6 @@ export function SettingsDrawer({
   onUpdateFilters,
   onResetDataCache,
   onResetAllCache,
-  defaultApiBase,
 }: Props) {
   const [pending, setPending] = useState<null | "data" | "all">(null);
   const [confirm, setConfirm] = useState<null | "data" | "all">(null);
@@ -44,10 +41,6 @@ export function SettingsDrawer({
   const handleThemeChange = (_: unknown, value: FiltersState["theme"] | null) => {
     if (!value) return;
     onUpdateFilters({ ...filters, theme: value });
-  };
-
-  const handleApiBaseChange = (value: string) => {
-    onUpdateFilters({ ...filters, apiBase: value });
   };
 
   const handleResetData = async () => {
@@ -66,10 +59,6 @@ export function SettingsDrawer({
     } finally {
       setPending(null);
     }
-  };
-
-  const handleResetApi = () => {
-    onUpdateFilters({ ...filters, apiBase: defaultApiBase });
   };
 
   return (
@@ -100,23 +89,6 @@ export function SettingsDrawer({
               <ToggleButton value="system">System</ToggleButton>
             </ToggleButtonGroup>
           </Box>
-
-          <Divider />
-
-          <Stack spacing={1}>
-            <Typography variant="subtitle2">API URL Override</Typography>
-            <TextField
-              label="API Base URL"
-              value={filters.apiBase ?? ""}
-              onChange={(e) => handleApiBaseChange(e.target.value)}
-              helperText={`Leave blank to use default: ${defaultApiBase}`}
-              size="small"
-              fullWidth
-            />
-            <Button variant="outlined" size="small" onClick={handleResetApi}>
-              Reset API URL to default
-            </Button>
-          </Stack>
 
           <Divider />
 

@@ -29,7 +29,6 @@ import { getDataBetween } from "../lib/api";
 import { AggregatedPoint, FiltersState } from "../lib/types";
 import { clearAllCache, clearDataCache } from "../lib/cache";
 import { SettingsDrawer } from "../components/SettingsDrawer";
-import { DEFAULT_API_BASE } from "../lib/config";
 
 export default function Page() {
   const prefersDark = useMediaQuery("(prefers-color-scheme: dark)");
@@ -76,7 +75,6 @@ export default function Page() {
           throw new Error("From date must be before To date");
         }
         const records = await getDataBetween(from, to, {
-          apiBase: activeFilters.apiBase,
           signal: controller.signal,
         });
         const aggregated = aggregateRecords(records, activeFilters.aggregation);
@@ -182,7 +180,6 @@ export default function Page() {
           onUpdateFilters={updateFilters}
           onResetDataCache={handleResetDataCache}
           onResetAllCache={handleResetAllCache}
-          defaultApiBase={DEFAULT_API_BASE}
         />
       )}
       <Snackbar

@@ -1,27 +1,18 @@
 import { addDays, startOfDay } from "date-fns";
 import { EnergyRecord } from "./types";
 import { getCachedDayKeys, getDayFromCache, setDayInCache, updateManifest } from "./cache";
-import { DEFAULT_API_BASE } from "./config";
 
 const isoDateOnly = (date: Date) => date.toISOString().slice(0, 10);
 
-function buildUrl(apiBase: string | undefined, from: Date, to: Date) {
-  const base = (apiBase && apiBase.trim()) || DEFAULT_API_BASE;
-  const fromIso = from.toISOString();
-  const toIso = to.toISOString();
-
-  if (base.includes("{FROM}") || base.includes("{TO}")) {
-    return base
-      .replace("{FROM}", encodeURIComponent(fromIso))
-      .replace("{TO}", encodeURIComponent(toIso));
-  }
-
-  const separator = base.includes("?") ? "&" : "?";
-  return `${base}${separator}from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}`;
+function buildUrl(from: Date, to: Date) {
+  const base = "/api/data";
+  const fromIso = encodeURIComponent(from.toISOString());
+  const toIso = encodeURIComponent(to.toISOString());
+  return `${base}?from=${fromIso}&to=${toIso}`;
 }
 
-async function fetchRange(from: Date, to: Date, apiBase?: string, signal?: AbortSignal) {
-  const url = buildUrl(apiBase, from, to);
+async function fetchRange(from: Date, to: Date, signal?: AbortSignal) {
+  const url = buildUrl(from, to);
   const resp = await fetch(url, { signal });
   if (!resp.ok) {
     throw new Error(`Failed to fetch data: ${resp.status}`);
@@ -39,7 +30,6 @@ export async function getDataBetween(
   to: Date,
   options?: {
     onChunk?: (dayKey: string, state: "cached" | "fetched") => void;
-    apiBase?: string;
     signal?: AbortSignal;
   }
 ): Promise<EnergyRecord[]> {
@@ -106,7 +96,7 @@ export async function getDataBetween(
   for (const range of missingRanges) {
     const fromRange = range.start;
     const toRange = range.end instanceof Date ? range.end : addDays(range.end, 1);
-    const fetched = await fetchRange(fromRange, toRange, options?.apiBase, options?.signal);
+    const fetched = await fetchRange(fromRange, toRange, options?.signal);
     options?.onChunk?.(isoDateOnly(fromRange), "fetched");
 
     // Split fetched data by day and cache per-day to keep manifest granularity
