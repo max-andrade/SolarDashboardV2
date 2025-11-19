@@ -26,7 +26,7 @@ services:
       - html:/usr/share/nginx/html
       - acme:/etc/acme.sh
     environment:
-      - DEFAULT_EMAIL=max.andrade@gmail.com
+      - DEFAULT_EMAIL=ma.n8n.admin@gmail.com
       - NGINX_PROXY_CONTAINER=nginx-proxy
     depends_on:
       - nginx-proxy
@@ -59,7 +59,7 @@ services:
       - NODE_TLS_REJECT_UNAUTHORIZED=0
       - VIRTUAL_HOST=n8n.20.248.127.1.nip.io
       - LETSENCRYPT_HOST=n8n.20.248.127.1.nip.io
-      - LETSENCRYPT_EMAIL=max.andrade@gmail.com
+      - LETSENCRYPT_EMAIL=ma.n8n.admin@gmail.com
       - N8N_HOST=n8n.20.248.127.1.nip.io
       - WEBHOOK_URL=https://n8n.20.248.127.1.nip.io/
       - N8N_WEBHOOK_TUNNEL_URL=https://n8n.20.248.127.1.nip.io/
@@ -77,7 +77,7 @@ services:
     environment:
       - VIRTUAL_HOST=openwebui.20.248.127.1.nip.io
       - LETSENCRYPT_HOST=openwebui.20.248.127.1.nip.io
-      - LETSENCRYPT_EMAIL=max.andrade@gmail.com
+      - LETSENCRYPT_EMAIL=ma.n8n.admin@gmail.com
     volumes:
       - ./openwebui_data:/app/backend/data
     networks:
@@ -92,7 +92,7 @@ services:
     environment:
       - VIRTUAL_HOST=homeassistant.20.248.127.1.nip.io
       - LETSENCRYPT_HOST=homeassistant.20.248.127.1.nip.io
-      - LETSENCRYPT_EMAIL=max.andrade@gmail.com
+      - LETSENCRYPT_EMAIL=ma.n8n.admin@gmail.com
     network_mode: host
 
 volumes:
